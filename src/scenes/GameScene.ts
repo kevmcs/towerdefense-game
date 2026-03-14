@@ -8,6 +8,7 @@ import { WaveManager } from '../managers/WaveManager';
 import { HUD } from '../ui/HUD';
 import { TowerSelectionPanel } from '../ui/TowerSelectionPanel';
 import { TowerInfoPanel } from '../ui/TowerInfoPanel';
+import { EnemyInfoPanel } from '../ui/EnemyInfoPanel';
 import { TOWER_DATA } from '../data/towerData';
 
 type GameState = 'idle' | 'wave' | 'between' | 'gameover' | 'victory';
@@ -26,6 +27,7 @@ export class GameScene extends Phaser.Scene {
   private hud!: HUD;
   private selectionPanel!: TowerSelectionPanel;
   private infoPanel!: TowerInfoPanel;
+  private enemyInfoPanel!: EnemyInfoPanel;
 
   private state: GameState = 'idle';
   private startWaveBtn!: Phaser.GameObjects.Text;
@@ -48,12 +50,24 @@ export class GameScene extends Phaser.Scene {
     this.waveManager = new WaveManager();
     this.hud         = new HUD(this, GAME_WIDTH);
 
-    this.selectionPanel = new TowerSelectionPanel(this, (type, idx) => this.onTowerSelected(type, idx));
-    this.infoPanel      = new TowerInfoPanel(
+    this.selectionPanel  = new TowerSelectionPanel(this, (type, idx) => this.onTowerSelected(type, idx));
+    this.infoPanel       = new TowerInfoPanel(
       this,
       (idx) => this.onUpgradeTower(idx),
       (idx) => this.onSellTower(idx),
     );
+    this.enemyInfoPanel  = new EnemyInfoPanel(this);
+
+    this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+      for (const e of this.enemies) {
+        if (e.containsPoint(ptr.x, ptr.y)) {
+          this.selectionPanel.hide();
+          this.deselectTower();
+          this.enemyInfoPanel.show(ptr.x, ptr.y, e.getInfoSnapshot());
+          return;
+        }
+      }
+    });
 
     this.drawBackground();
     this.drawPath();
@@ -242,6 +256,7 @@ export class GameScene extends Phaser.Scene {
 
   private endGame(won: boolean) {
     this.state = won ? 'victory' : 'gameover';
+    this.enemyInfoPanel.hide();
     this.time.delayedCall(600, () => {
       this.scene.start('GameOverScene', { won, gold: this.economy.gold, wave: this.waveManager.waveNumber });
     });

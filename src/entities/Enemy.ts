@@ -150,6 +150,30 @@ export class Enemy {
     this.hpBar.fillRect(bx, by, barW * pct, this.isBoss ? 6 : 4);
   }
 
+  containsPoint(px: number, py: number): boolean {
+    const dx = px - this.x;
+    const dy = py - this.y;
+    return dx * dx + dy * dy <= (this.radius + 4) * (this.radius + 4);
+  }
+
+  getName(): string {
+    return this.type.charAt(0).toUpperCase() + this.type.slice(1);
+  }
+
+  getInfoSnapshot() {
+    return {
+      name:    this.getName(),
+      type:    this.type,
+      hp:      Math.ceil(this.hp),
+      maxHp:   this.maxHp,
+      speed:   this.speed,
+      armor:   this.armor,
+      reward:  this.reward,
+      isBoss:  this.isBoss,
+      isSlowed: this.slowMultiplier < 1,
+    };
+  }
+
   destroy() {
     this.graphics.destroy();
     this.hpBar.destroy();
