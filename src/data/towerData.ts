@@ -19,7 +19,7 @@ export const TOWER_DATA: Record<string, TowerStats> = {
     name: 'Archer',
     description: 'Fast, long range',
     cost: 50,
-    range: 195,
+    range: 175,
     damage: 20,
     fireRate: 1.5,
     color: 0x3498db,

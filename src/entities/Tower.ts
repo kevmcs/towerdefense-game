@@ -84,12 +84,14 @@ export class Tower {
     if (this.fireCooldown > 0) return;
     const target = this.findTarget(enemies);
     if (!target) return;
+    const homing = this.type !== 'archer' || this.level === 3;
     projectiles.push(
       new Projectile(
         this.scene, this.x, this.y, target,
         this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
         this.effectiveSplashRadius, enemies,
         this.stats.ignoresArmor ?? false,
+        homing,
       ),
     );
     this.fireCooldown = 1000 / this.effectiveFireRate;

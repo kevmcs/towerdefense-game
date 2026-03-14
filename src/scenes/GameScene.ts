@@ -63,7 +63,7 @@ export class GameScene extends Phaser.Scene {
         if (e.containsPoint(ptr.x, ptr.y)) {
           this.selectionPanel.hide();
           this.deselectTower();
-          this.enemyInfoPanel.show(ptr.x, ptr.y, e.getInfoSnapshot());
+          this.enemyInfoPanel.show(e.getInfoSnapshot());
           return;
         }
       }
@@ -126,6 +126,7 @@ export class GameScene extends Phaser.Scene {
   private onSpotClicked(index: number) {
     // Close any open panels first
     this.selectionPanel.hide();
+    this.enemyInfoPanel.hide();
 
     if (this.occupiedSpots.has(index)) {
       // Toggle: clicking the already-selected tower deselects it

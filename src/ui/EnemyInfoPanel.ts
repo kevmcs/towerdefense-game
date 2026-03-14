@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config';
 
-const PANEL_W = 190;
+const RIBBON_H = 46;
+const RIBBON_Y = GAME_HEIGHT - RIBBON_H;
 const mono = { fontFamily: 'monospace' };
 
 export class EnemyInfoPanel {
@@ -13,72 +14,105 @@ export class EnemyInfoPanel {
     this.scene = scene;
   }
 
-  show(clickX: number, clickY: number, info: ReturnType<import('../entities/Enemy').Enemy['getInfoSnapshot']>) {
+  show(info: ReturnType<import('../entities/Enemy').Enemy['getInfoSnapshot']>) {
     this.hide();
 
-    const tags: string[] = [];
-    if (info.isBoss)   tags.push('⚠ BOSS');
-    if (info.isSlowed) tags.push('❄ SLOWED');
+    const cy = RIBBON_Y + RIBBON_H / 2;  // vertical center of ribbon
 
-    const lines: string[] = [];
-    lines.push(`HP    ${info.hp} / ${info.maxHp}`);
-    lines.push(`SPD   ${info.speed} px/s`);
-    lines.push(`ARMOR ${info.armor > 0 ? Math.round(info.armor * 100) + '%' : 'None'}`);
-    lines.push(`GOLD  +${info.reward}g`);
-    if (tags.length) lines.push(tags.join('  '));
-
-    const panelH = 36 + lines.length * 17 + 10;
-
-    // Position near click, clamped to screen
-    let px = clickX + 12;
-    let py = clickY - panelH / 2;
-    if (px + PANEL_W > GAME_WIDTH - 4)  px = clickX - PANEL_W - 12;
-    if (py < 4)                          py = 4;
-    if (py + panelH > GAME_HEIGHT - 4)  py = GAME_HEIGHT - panelH - 4;
-
-    // Dismiss zone
-    const dismiss = this.scene.add
-      .zone(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT)
-      .setInteractive().setDepth(19);
-    dismiss.on('pointerdown', () => this.hide());
-    this.objects.push(dismiss);
-
-    // Background
+    // Background ribbon
     const bg = this.scene.add.graphics().setDepth(20);
-    bg.fillStyle(0x0d1b2a, 0.95);
-    bg.fillRoundedRect(px, py, PANEL_W, panelH, 6);
+    bg.fillStyle(0x0a1520, 0.97);
+    bg.fillRect(0, RIBBON_Y, GAME_WIDTH, RIBBON_H);
     bg.lineStyle(1, info.isBoss ? 0xff4444 : 0x3a5f8a);
-    bg.strokeRoundedRect(px, py, PANEL_W, panelH, 6);
+    bg.lineBetween(0, RIBBON_Y, GAME_WIDTH, RIBBON_Y);
     this.objects.push(bg);
 
-    // Name header
+    // ── Name ────────────────────────────────────────────────────
     const nameColor = info.isBoss ? '#ff4444' : '#f1c40f';
-    const header = this.scene.add
-      .text(px + 10, py + 10, info.name, { fontSize: '15px', color: nameColor, fontStyle: 'bold', ...mono })
-      .setDepth(21);
-    this.objects.push(header);
+    const nameT = this.scene.add
+      .text(14, cy, info.name.toUpperCase(), {
+        fontSize: '14px', color: nameColor, fontStyle: 'bold', ...mono,
+      })
+      .setOrigin(0, 0.5).setDepth(21);
+    this.objects.push(nameT);
 
-    // HP bar
-    const barW = PANEL_W - 20;
-    const bx = px + 10;
-    const by = py + 29;
-    const pct = Math.max(0, info.hp / info.maxHp);
-    const hpColor = pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c;
-    const barBg = this.scene.add.graphics().setDepth(20);
-    barBg.fillStyle(0x2c2c2c);
-    barBg.fillRect(bx, by, barW, 5);
-    barBg.fillStyle(hpColor);
-    barBg.fillRect(bx, by, barW * pct, 5);
-    this.objects.push(barBg);
+    // ── HP bar + fraction ────────────────────────────────────────
+    const hpLabelX = 115;
+    const barX     = 135;
+    const barW     = 130;
+    const barH     = 7;
+    const barY     = cy - barH / 2;
+    const pct      = Math.max(0, info.hp / info.maxHp);
+    const hpColor  = pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c;
 
-    // Stat lines
-    lines.forEach((line, i) => {
-      const color = line.startsWith('⚠') ? '#ff4444' : line.startsWith('❄') ? '#74b9ff' : '#aaccee';
+    this.scene.add
+      .text(hpLabelX, cy, 'HP', { fontSize: '11px', color: '#7799bb', ...mono })
+      .setOrigin(0, 0.5).setDepth(21);
+    this.objects.push(this.scene.add.graphics().setDepth(20));  // placeholder
+
+    const barGfx = this.scene.add.graphics().setDepth(20);
+    barGfx.fillStyle(0x2c2c2c);
+    barGfx.fillRect(barX, barY, barW, barH);
+    barGfx.fillStyle(hpColor);
+    barGfx.fillRect(barX, barY, barW * pct, barH);
+    this.objects.push(barGfx);
+
+    this.scene.add
+      .text(barX + barW + 6, cy, `${info.hp}/${info.maxHp}`, {
+        fontSize: '11px', color: '#aaccee', ...mono,
+      })
+      .setOrigin(0, 0.5).setDepth(21);
+
+    // ── Divider helper ───────────────────────────────────────────
+    const addDivider = (x: number) => {
+      const g = this.scene.add.graphics().setDepth(20);
+      g.lineStyle(1, 0x2a4a6a, 0.8);
+      g.lineBetween(x, RIBBON_Y + 8, x, GAME_HEIGHT - 8);
+      this.objects.push(g);
+    };
+
+    // ── SPD ──────────────────────────────────────────────────────
+    const divX1 = 305;
+    addDivider(divX1);
+    this.scene.add
+      .text(divX1 + 14, cy, `SPD  ${info.speed} px/s`, {
+        fontSize: '12px', color: '#aaccee', ...mono,
+      })
+      .setOrigin(0, 0.5).setDepth(21);
+
+    // ── ARMOR ────────────────────────────────────────────────────
+    const divX2 = 450;
+    addDivider(divX2);
+    const armorStr = info.armor > 0 ? `${Math.round(info.armor * 100)}%` : 'None';
+    this.scene.add
+      .text(divX2 + 14, cy, `ARMOR  ${armorStr}`, {
+        fontSize: '12px', color: '#aaccee', ...mono,
+      })
+      .setOrigin(0, 0.5).setDepth(21);
+
+    // ── GOLD ─────────────────────────────────────────────────────
+    const divX3 = 590;
+    addDivider(divX3);
+    this.scene.add
+      .text(divX3 + 14, cy, `GOLD  +${info.reward}g`, {
+        fontSize: '12px', color: '#f1c40f', ...mono,
+      })
+      .setOrigin(0, 0.5).setDepth(21);
+
+    // ── Status tags (right-aligned) ──────────────────────────────
+    let tagX = GAME_WIDTH - 12;
+    if (info.isSlowed) {
       const t = this.scene.add
-        .text(px + 10, by + 10 + i * 17, line, { fontSize: '12px', color, ...mono })
-        .setDepth(21);
+        .text(tagX, cy, '❄ SLOWED', { fontSize: '12px', color: '#74b9ff', ...mono })
+        .setOrigin(1, 0.5).setDepth(21);
       this.objects.push(t);
-    });
+      tagX -= t.width + 14;
+    }
+    if (info.isBoss) {
+      this.scene.add
+        .text(tagX, cy, '⚠ BOSS', { fontSize: '12px', color: '#ff4444', fontStyle: 'bold', ...mono })
+        .setOrigin(1, 0.5).setDepth(21);
+    }
 
     this.isVisible = true;
   }

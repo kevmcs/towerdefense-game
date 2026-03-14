@@ -18,7 +18,7 @@ export class Enemy {
   type: string;
 
   private color: number;
-  private radius: number;
+  radius: number;
   private armor: number;
   private isBoss: boolean;
   private waypointIndex = 1;

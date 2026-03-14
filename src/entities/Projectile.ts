@@ -15,6 +15,13 @@ export class Projectile {
   private splashRadius: number;
   private ignoresArmor: boolean;
   private allEnemies: Enemy[];
+  private homing: boolean;
+
+  // Fixed direction for non-homing shots
+  private vx = 0;
+  private vy = 0;
+  private traveled = 0;
+  private maxRange = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -27,6 +34,7 @@ export class Projectile {
     splashRadius = 0,
     allEnemies: Enemy[] = [],
     ignoresArmor = false,
+    homing = true,
   ) {
     this.scene = scene;
     this.x = x;
@@ -38,27 +46,50 @@ export class Projectile {
     this.splashRadius = splashRadius;
     this.allEnemies = allEnemies;
     this.ignoresArmor = ignoresArmor;
+    this.homing = homing;
     this.graphics = scene.add.graphics().setDepth(5);
+
+    if (!homing) {
+      const dx = target.x - x;
+      const dy = target.y - y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      this.vx = dx / dist;
+      this.vy = dy / dist;
+      this.maxRange = dist + 40; // travel a bit past the target point
+    }
+
     this.draw();
   }
 
   update(delta: number) {
     if (!this.alive) return;
-
-    const tx = this.target.x;
-    const ty = this.target.y;
-    const dx = tx - this.x;
-    const dy = ty - this.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
     const step = this.speed * (delta / 1000);
 
-    if (dist <= step + 2) {
-      this.onHit();
-      return;
+    if (this.homing) {
+      const dx = this.target.x - this.x;
+      const dy = this.target.y - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= step + 2) { this.onHit(); return; }
+      this.x += (dx / dist) * step;
+      this.y += (dy / dist) * step;
+    } else {
+      this.x += this.vx * step;
+      this.y += this.vy * step;
+      this.traveled += step;
+
+      // Hit any enemy within radius, or expire
+      for (const e of this.allEnemies) {
+        if (!e.alive) continue;
+        const dx = e.x - this.x;
+        const dy = e.y - this.y;
+        if (Math.sqrt(dx * dx + dy * dy) <= e.radius + 5) {
+          this.onHit();
+          return;
+        }
+      }
+      if (this.traveled >= this.maxRange) { this.destroy(); return; }
     }
 
-    this.x += (dx / dist) * step;
-    this.y += (dy / dist) * step;
     this.draw();
   }
 
