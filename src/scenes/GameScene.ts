@@ -67,6 +67,7 @@ export class GameScene extends Phaser.Scene {
           return;
         }
       }
+      this.enemyInfoPanel.hide();
     });
 
     this.drawBackground();
