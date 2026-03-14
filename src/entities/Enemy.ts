@@ -156,6 +156,17 @@ export class Enemy {
     return dx * dx + dy * dy <= (this.radius + 4) * (this.radius + 4);
   }
 
+  /** Current velocity vector (px/s) accounting for slow */
+  getVelocity(): { vx: number; vy: number } {
+    if (this.waypointIndex >= PATH_WAYPOINTS.length) return { vx: 0, vy: 0 };
+    const target = PATH_WAYPOINTS[this.waypointIndex];
+    const dx = target.x - this.x;
+    const dy = target.y - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const spd  = this.speed * this.slowMultiplier;
+    return { vx: (dx / dist) * spd, vy: (dy / dist) * spd };
+  }
+
   getName(): string {
     return this.type.charAt(0).toUpperCase() + this.type.slice(1);
   }

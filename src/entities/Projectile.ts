@@ -35,6 +35,8 @@ export class Projectile {
     allEnemies: Enemy[] = [],
     ignoresArmor = false,
     homing = true,
+    aimX?: number,
+    aimY?: number,
   ) {
     this.scene = scene;
     this.x = x;
@@ -50,12 +52,15 @@ export class Projectile {
     this.graphics = scene.add.graphics().setDepth(5);
 
     if (!homing) {
-      const dx = target.x - x;
-      const dy = target.y - y;
+      // Use provided aim point (predictive intercept) or fall back to current enemy pos
+      const ax = aimX ?? target.x;
+      const ay = aimY ?? target.y;
+      const dx = ax - x;
+      const dy = ay - y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
       this.vx = dx / dist;
       this.vy = dy / dist;
-      this.maxRange = dist + 40; // travel a bit past the target point
+      this.maxRange = dist + 60;
     }
 
     this.draw();

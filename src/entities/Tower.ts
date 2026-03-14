@@ -85,6 +85,13 @@ export class Tower {
     const target = this.findTarget(enemies);
     if (!target) return;
     const homing = this.type !== 'archer' || this.level === 3;
+    let aimX: number | undefined;
+    let aimY: number | undefined;
+    if (!homing) {
+      const intercept = this.computeIntercept(target, this.stats.projectileSpeed);
+      aimX = intercept.x;
+      aimY = intercept.y;
+    }
     projectiles.push(
       new Projectile(
         this.scene, this.x, this.y, target,
@@ -92,6 +99,8 @@ export class Tower {
         this.effectiveSplashRadius, enemies,
         this.stats.ignoresArmor ?? false,
         homing,
+        aimX,
+        aimY,
       ),
     );
     this.fireCooldown = 1000 / this.effectiveFireRate;
@@ -253,6 +262,39 @@ export class Tower {
     } else {
       this.graphics.fillCircle(this.x, this.y, 4);
     }
+  }
+
+  /**
+   * Quadratic intercept: solve for t where |p + v*t| = projSpeed*t
+   * Returns the predicted enemy position at intercept time, or current pos as fallback.
+   */
+  private computeIntercept(target: Enemy, projSpeed: number): { x: number; y: number } {
+    const { vx, vy } = target.getVelocity();
+    const dx = target.x - this.x;
+    const dy = target.y - this.y;
+
+    const a = vx * vx + vy * vy - projSpeed * projSpeed;
+    const b = 2 * (dx * vx + dy * vy);
+    const c = dx * dx + dy * dy;
+
+    let t = -1;
+    if (Math.abs(a) < 0.001) {
+      // Projectile much faster than enemy — nearly direct shot
+      t = -c / b;
+    } else {
+      const disc = b * b - 4 * a * c;
+      if (disc >= 0) {
+        const sq = Math.sqrt(disc);
+        const t1 = (-b - sq) / (2 * a);
+        const t2 = (-b + sq) / (2 * a);
+        if (t1 > 0 && t2 > 0) t = Math.min(t1, t2);
+        else if (t1 > 0) t = t1;
+        else if (t2 > 0) t = t2;
+      }
+    }
+
+    if (t < 0) return { x: target.x, y: target.y };
+    return { x: target.x + vx * t, y: target.y + vy * t };
   }
 
   destroyTower() {
