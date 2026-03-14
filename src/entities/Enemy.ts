@@ -156,15 +156,33 @@ export class Enemy {
     return dx * dx + dy * dy <= (this.radius + 4) * (this.radius + 4);
   }
 
-  /** Current velocity vector (px/s) accounting for slow */
-  getVelocity(): { vx: number; vy: number } {
-    if (this.waypointIndex >= PATH_WAYPOINTS.length) return { vx: 0, vy: 0 };
-    const target = PATH_WAYPOINTS[this.waypointIndex];
-    const dx = target.x - this.x;
-    const dy = target.y - this.y;
-    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    const spd  = this.speed * this.slowMultiplier;
-    return { vx: (dx / dist) * spd, vy: (dy / dist) * spd };
+  /**
+   * Returns the enemy's position after travelling `t` seconds along the path,
+   * accounting for waypoint turns and current slow factor.
+   */
+  getPositionAtTime(t: number): { x: number; y: number } {
+    let remaining = this.speed * this.slowMultiplier * t;
+    let cx = this.x;
+    let cy = this.y;
+    let wi = this.waypointIndex;
+
+    while (remaining > 0 && wi < PATH_WAYPOINTS.length) {
+      const wx = PATH_WAYPOINTS[wi].x;
+      const wy = PATH_WAYPOINTS[wi].y;
+      const dx = wx - cx;
+      const dy = wy - cy;
+      const segLen = Math.sqrt(dx * dx + dy * dy);
+      if (segLen <= 0) { wi++; continue; }
+      if (remaining <= segLen) {
+        return { x: cx + (dx / segLen) * remaining, y: cy + (dy / segLen) * remaining };
+      }
+      remaining -= segLen;
+      cx = wx;
+      cy = wy;
+      wi++;
+    }
+
+    return { x: cx, y: cy };
   }
 
   getName(): string {

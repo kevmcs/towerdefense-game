@@ -265,36 +265,25 @@ export class Tower {
   }
 
   /**
-   * Quadratic intercept: solve for t where |p + v*t| = projSpeed*t
-   * Returns the predicted enemy position at intercept time, or current pos as fallback.
+   * Iterative path-aware intercept: repeatedly refines the estimated intercept
+   * time by tracing the enemy's actual waypoint path, so corners are accounted for.
    */
   private computeIntercept(target: Enemy, projSpeed: number): { x: number; y: number } {
-    const { vx, vy } = target.getVelocity();
-    const dx = target.x - this.x;
-    const dy = target.y - this.y;
+    const dx0 = target.x - this.x;
+    const dy0 = target.y - this.y;
+    // Seed t with the direct-shot travel time
+    let t = Math.sqrt(dx0 * dx0 + dy0 * dy0) / projSpeed;
 
-    const a = vx * vx + vy * vy - projSpeed * projSpeed;
-    const b = 2 * (dx * vx + dy * vy);
-    const c = dx * dx + dy * dy;
-
-    let t = -1;
-    if (Math.abs(a) < 0.001) {
-      // Projectile much faster than enemy — nearly direct shot
-      t = -c / b;
-    } else {
-      const disc = b * b - 4 * a * c;
-      if (disc >= 0) {
-        const sq = Math.sqrt(disc);
-        const t1 = (-b - sq) / (2 * a);
-        const t2 = (-b + sq) / (2 * a);
-        if (t1 > 0 && t2 > 0) t = Math.min(t1, t2);
-        else if (t1 > 0) t = t1;
-        else if (t2 > 0) t = t2;
-      }
+    for (let i = 0; i < 8; i++) {
+      const pos = target.getPositionAtTime(t);
+      const dx  = pos.x - this.x;
+      const dy  = pos.y - this.y;
+      const tNew = Math.sqrt(dx * dx + dy * dy) / projSpeed;
+      if (Math.abs(tNew - t) < 0.5) break;
+      t = tNew;
     }
 
-    if (t < 0) return { x: target.x, y: target.y };
-    return { x: target.x + vx * t, y: target.y + vy * t };
+    return target.getPositionAtTime(t);
   }
 
   destroyTower() {
