@@ -279,7 +279,7 @@ export class Tower {
       const dx  = pos.x - this.x;
       const dy  = pos.y - this.y;
       const tNew = Math.sqrt(dx * dx + dy * dy) / projSpeed;
-      if (Math.abs(tNew - t) < 0.5) break;
+      if (Math.abs(tNew - t) < 0.001) break;
       t = tNew;
     }
 
