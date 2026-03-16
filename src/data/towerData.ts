@@ -74,7 +74,7 @@ export const TOWER_DATA: Record<string, TowerStats> = {
     cost: 150,
     range: 190,
     damage: 75,
-    fireRate: 0.5,
+    fireRate: 0.3,
     color: 0x7f8c8d,
     projectileColor: 0x2c3e50,
     projectileSpeed: 170,

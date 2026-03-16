@@ -69,8 +69,11 @@ export class Bomb {
       if (!e.alive) continue;
       const dx = e.x - this.x;
       const dy = e.y - this.y;
-      if (Math.sqrt(dx * dx + dy * dy) <= this.splashRadius + e.radius) {
-        e.takeDamage(this.damage, this.ignoresArmor);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= this.splashRadius + e.radius) {
+        // Full damage at center, 20% at the edge
+        const falloff = Math.max(0.2, 1 - (dist / this.splashRadius) * 0.8);
+        e.takeDamage(this.damage * falloff, this.ignoresArmor);
       }
     }
     this.showExplosion();
