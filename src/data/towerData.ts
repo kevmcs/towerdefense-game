@@ -33,7 +33,7 @@ export const TOWER_DATA: Record<string, TowerStats> = {
     description: 'AoE, ignores armor',
     cost: 100,
     range: 150,
-    damage: 45,
+    damage: 20,
     fireRate: 0.6,
     color: 0x9b59b6,
     projectileColor: 0xe74c3c,
