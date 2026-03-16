@@ -2,7 +2,6 @@ import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 
 export class Projectile {
-  private scene: Phaser.Scene;
   private graphics: Phaser.GameObjects.Graphics;
   x: number;
   y: number;
@@ -12,7 +11,6 @@ export class Projectile {
   private speed: number;
   private damage: number;
   private color: number;
-  private splashRadius: number;
   private ignoresArmor: boolean;
   private allEnemies: Enemy[];
   private homing: boolean;
@@ -31,21 +29,18 @@ export class Projectile {
     damage: number,
     speed: number,
     color: number,
-    splashRadius = 0,
     allEnemies: Enemy[] = [],
     ignoresArmor = false,
     homing = true,
     aimX?: number,
     aimY?: number,
   ) {
-    this.scene = scene;
     this.x = x;
     this.y = y;
     this.target = target;
     this.damage = damage;
     this.speed = speed;
     this.color = color;
-    this.splashRadius = splashRadius;
     this.allEnemies = allEnemies;
     this.ignoresArmor = ignoresArmor;
     this.homing = homing;

@@ -26,7 +26,6 @@ export class Tower {
   private effectiveRange: number;
   private effectiveFireRate: number;
   private effectiveSlowFactor: number;
-  private effectiveSplashRadius: number;
 
   private fireCooldown = 0;
   private soldiers: Soldier[] = [];
@@ -45,7 +44,6 @@ export class Tower {
     this.effectiveRange       = stats.range;
     this.effectiveFireRate    = stats.fireRate;
     this.effectiveSlowFactor  = stats.slowFactor ?? 0.45;
-    this.effectiveSplashRadius = stats.splashRadius;
 
     this.rangeGraphics = scene.add.graphics().setDepth(2);
     this.graphics      = scene.add.graphics().setDepth(3);
@@ -92,7 +90,7 @@ export class Tower {
           new Projectile(
             this.scene, this.x, this.y, target,
             this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
-            0, enemies,
+            enemies,
             this.stats.ignoresArmor ?? false,
             true,
           ),
@@ -113,7 +111,7 @@ export class Tower {
         new Projectile(
           this.scene, this.x, this.y, target,
           this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
-          this.effectiveSplashRadius, enemies,
+          enemies,
           this.stats.ignoresArmor ?? false,
           homing,
           aimX,
@@ -180,7 +178,6 @@ export class Tower {
     this.effectiveDamage      = this.stats.damage   * tier.damageMultiplier;
     this.effectiveRange       = this.stats.range    * tier.rangeMultiplier;
     this.effectiveFireRate    = this.stats.fireRate  * tier.fireRateMultiplier;
-    this.effectiveSplashRadius = this.stats.splashRadius * tier.rangeMultiplier; // scale splash with range
     if (tier.slowFactor !== undefined) this.effectiveSlowFactor = tier.slowFactor;
 
     // Barracks L3: spawn a 3rd soldier
