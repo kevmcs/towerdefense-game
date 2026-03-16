@@ -69,7 +69,7 @@ export class Projectile {
       const dx = this.target.x - this.x;
       const dy = this.target.y - this.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= step + 2) { this.onHit(); return; }
+      if (dist <= this.target.radius + 6) { this.onHit(); return; }
       this.x += (dx / dist) * step;
       this.y += (dy / dist) * step;
     } else {
@@ -82,7 +82,7 @@ export class Projectile {
         if (!e.alive) continue;
         const dx = e.x - this.x;
         const dy = e.y - this.y;
-        if (Math.sqrt(dx * dx + dy * dy) <= e.radius + 5) {
+        if (Math.sqrt(dx * dx + dy * dy) <= e.radius + 6) {
           this.onHit();
           return;
         }
