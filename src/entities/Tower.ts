@@ -82,27 +82,46 @@ export class Tower {
   private updateShooter(delta: number, enemies: Enemy[], projectiles: Projectile[]) {
     this.fireCooldown -= delta;
     if (this.fireCooldown > 0) return;
-    const target = this.findTarget(enemies);
-    if (!target) return;
-    const homing = this.type !== 'archer' || this.level === 3;
-    let aimX: number | undefined;
-    let aimY: number | undefined;
-    if (!homing) {
-      const intercept = this.computeIntercept(target, this.stats.projectileSpeed);
-      aimX = intercept.x;
-      aimY = intercept.y;
+
+    if (this.type === 'mage') {
+      const count = this.level + 1; // L1=2, L2=3, L3=4
+      const targets = this.findTargets(enemies, count);
+      if (targets.length === 0) return;
+      for (const target of targets) {
+        projectiles.push(
+          new Projectile(
+            this.scene, this.x, this.y, target,
+            this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
+            0, enemies,
+            this.stats.ignoresArmor ?? false,
+            true,
+          ),
+        );
+      }
+    } else {
+      const target = this.findTarget(enemies);
+      if (!target) return;
+      const homing = this.type !== 'archer' || this.level === 3;
+      let aimX: number | undefined;
+      let aimY: number | undefined;
+      if (!homing) {
+        const intercept = this.computeIntercept(target, this.stats.projectileSpeed);
+        aimX = intercept.x;
+        aimY = intercept.y;
+      }
+      projectiles.push(
+        new Projectile(
+          this.scene, this.x, this.y, target,
+          this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
+          this.effectiveSplashRadius, enemies,
+          this.stats.ignoresArmor ?? false,
+          homing,
+          aimX,
+          aimY,
+        ),
+      );
     }
-    projectiles.push(
-      new Projectile(
-        this.scene, this.x, this.y, target,
-        this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
-        this.effectiveSplashRadius, enemies,
-        this.stats.ignoresArmor ?? false,
-        homing,
-        aimX,
-        aimY,
-      ),
-    );
+
     this.fireCooldown = 1000 / this.effectiveFireRate;
   }
 
@@ -117,6 +136,19 @@ export class Tower {
       if (d <= this.effectiveRange && d < bestDist) { best = e; bestDist = d; }
     }
     return best;
+  }
+
+  private findTargets(enemies: Enemy[], count: number): Enemy[] {
+    const inRange: { enemy: Enemy; dist: number }[] = [];
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      const dx = e.x - this.x;
+      const dy = e.y - this.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d <= this.effectiveRange) inRange.push({ enemy: e, dist: d });
+    }
+    inRange.sort((a, b) => a.dist - b.dist);
+    return inRange.slice(0, count).map(r => r.enemy);
   }
 
   // ── Upgrades & Sell ───────────────────────────────────────────────────────
