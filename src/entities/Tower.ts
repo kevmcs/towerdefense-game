@@ -83,7 +83,8 @@ export class Tower {
 
     if (this.type === 'mage') {
       const count = this.level + 1; // L1=2, L2=3, L3=4
-      const targets = this.findTargets(enemies, count);
+      const alreadyTargeted = new Set(projectiles.filter(p => p.alive).map(p => p.target));
+      const targets = this.findTargets(enemies, count, alreadyTargeted);
       if (targets.length === 0) return;
       for (const target of targets) {
         projectiles.push(
@@ -136,10 +137,10 @@ export class Tower {
     return best;
   }
 
-  private findTargets(enemies: Enemy[], count: number): Enemy[] {
+  private findTargets(enemies: Enemy[], count: number, exclude: Set<Enemy> = new Set()): Enemy[] {
     const inRange: { enemy: Enemy; dist: number }[] = [];
     for (const e of enemies) {
-      if (!e.alive) continue;
+      if (!e.alive || exclude.has(e)) continue;
       const dx = e.x - this.x;
       const dy = e.y - this.y;
       const d = Math.sqrt(dx * dx + dy * dy);

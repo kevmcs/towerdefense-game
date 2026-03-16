@@ -7,7 +7,7 @@ export class Projectile {
   y: number;
   alive = true;
 
-  private target: Enemy;
+  readonly target: Enemy;
   private speed: number;
   private damage: number;
   private color: number;
