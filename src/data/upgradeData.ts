@@ -29,4 +29,9 @@ export const UPGRADE_DATA: Record<string, UpgradeTier[]> = {
     { cost: 80,  damageMultiplier: 1.5, rangeMultiplier: 1.0, fireRateMultiplier: 1.35, label: 'Dmg+  Attack rate+' },
     { cost: 135, damageMultiplier: 2.1, rangeMultiplier: 1.0, fireRateMultiplier: 1.7, label: '3 soldiers  Heavy dmg' },
   ],
+  cannon: [
+    { cost: 0,   damageMultiplier: 1.0, rangeMultiplier: 1.0,  fireRateMultiplier: 1.0,  label: 'Base' },
+    { cost: 100, damageMultiplier: 1.6, rangeMultiplier: 1.15, fireRateMultiplier: 1.25, label: 'Dmg+  Blast radius+' },
+    { cost: 175, damageMultiplier: 2.4, rangeMultiplier: 1.3,  fireRateMultiplier: 1.5,  label: 'Massive blast' },
+  ],
 };

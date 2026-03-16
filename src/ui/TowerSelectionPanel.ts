@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { TOWER_DATA } from '../data/towerData';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config';
 
-const TOWER_TYPES = ['archer', 'mage', 'slow', 'barracks'] as const;
+const TOWER_TYPES = ['archer', 'mage', 'slow', 'barracks', 'cannon'] as const;
 const PANEL_W = 190;
 const ROW_H = 52;
 const HEADER_H = 30;

@@ -68,4 +68,17 @@ export const TOWER_DATA: Record<string, TowerStats> = {
     soldierCount: 2,
     ignoresArmor: false,
   },
+  cannon: {
+    name: 'Cannon',
+    description: 'AoE bomb, slow fire',
+    cost: 150,
+    range: 190,
+    damage: 75,
+    fireRate: 0.5,
+    color: 0x7f8c8d,
+    projectileColor: 0x2c3e50,
+    projectileSpeed: 170,
+    splashRadius: 65,
+    ignoresArmor: false,
+  },
 };

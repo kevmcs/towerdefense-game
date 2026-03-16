@@ -4,6 +4,7 @@ import { UPGRADE_DATA } from '../data/upgradeData';
 import { PATH_WAYPOINTS } from '../config';
 import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
+import { Bomb } from './Bomb';
 import { Soldier } from './Soldier';
 import type { TowerInfo } from '../ui/TowerInfoPanel';
 
@@ -26,6 +27,7 @@ export class Tower {
   private effectiveRange: number;
   private effectiveFireRate: number;
   private effectiveSlowFactor: number;
+  private effectiveSplashRadius: number;
 
   private fireCooldown = 0;
   private soldiers: Soldier[] = [];
@@ -44,6 +46,7 @@ export class Tower {
     this.effectiveRange       = stats.range;
     this.effectiveFireRate    = stats.fireRate;
     this.effectiveSlowFactor  = stats.slowFactor ?? 0.45;
+    this.effectiveSplashRadius = stats.splashRadius;
 
     this.rangeGraphics = scene.add.graphics().setDepth(2);
     this.graphics      = scene.add.graphics().setDepth(3);
@@ -56,13 +59,13 @@ export class Tower {
 
   // ── Update ────────────────────────────────────────────────────────────────
 
-  update(delta: number, enemies: Enemy[], projectiles: Projectile[]) {
+  update(delta: number, enemies: Enemy[], projectiles: Projectile[], bombs: Bomb[]) {
     if (this.type === 'slow') {
       this.applySlowEffect(enemies);
     } else if (this.type === 'barracks') {
       for (const s of this.soldiers) s.update(delta, enemies);
     } else {
-      this.updateShooter(delta, enemies, projectiles);
+      this.updateShooter(delta, enemies, projectiles, bombs);
     }
   }
 
@@ -77,11 +80,21 @@ export class Tower {
     }
   }
 
-  private updateShooter(delta: number, enemies: Enemy[], projectiles: Projectile[]) {
+  private updateShooter(delta: number, enemies: Enemy[], projectiles: Projectile[], bombs: Bomb[]) {
     this.fireCooldown -= delta;
     if (this.fireCooldown > 0) return;
 
-    if (this.type === 'mage') {
+    if (this.type === 'cannon') {
+      const target = this.findTarget(enemies);
+      if (!target) return;
+      const landPos = this.computeIntercept(target, this.stats.projectileSpeed);
+      bombs.push(new Bomb(
+        this.scene, this.x, this.y, landPos.x, landPos.y,
+        this.effectiveDamage, this.stats.projectileSpeed,
+        this.effectiveSplashRadius, enemies, this.stats.projectileColor,
+        this.stats.ignoresArmor ?? false,
+      ));
+    } else if (this.type === 'mage') {
       const count = this.level + 1; // L1=2, L2=3, L3=4
       const alreadyTargeted = new Set(projectiles.filter(p => p.alive).map(p => p.target));
       const targets = this.findTargets(enemies, count, alreadyTargeted);
@@ -176,9 +189,10 @@ export class Tower {
     const tier = UPGRADE_DATA[this.type]?.[this.level - 1];
     if (!tier) return;
 
-    this.effectiveDamage      = this.stats.damage   * tier.damageMultiplier;
-    this.effectiveRange       = this.stats.range    * tier.rangeMultiplier;
-    this.effectiveFireRate    = this.stats.fireRate  * tier.fireRateMultiplier;
+    this.effectiveDamage       = this.stats.damage      * tier.damageMultiplier;
+    this.effectiveRange        = this.stats.range       * tier.rangeMultiplier;
+    this.effectiveFireRate     = this.stats.fireRate    * tier.fireRateMultiplier;
+    this.effectiveSplashRadius = this.stats.splashRadius * tier.rangeMultiplier;
     if (tier.slowFactor !== undefined) this.effectiveSlowFactor = tier.slowFactor;
 
     // Barracks L3: spawn a 3rd soldier
@@ -289,6 +303,9 @@ export class Tower {
       this.graphics.fillTriangle(this.x, this.y - 8, this.x + 6, this.y, this.x, this.y + 8);
     } else if (this.type === 'barracks') {
       this.graphics.fillRect(this.x - 5, this.y - 5, 10, 10);
+    } else if (this.type === 'cannon') {
+      this.graphics.fillRect(this.x - 9, this.y - 4, 18, 8);
+      this.graphics.fillCircle(this.x - 6, this.y, 5);
     } else {
       this.graphics.fillCircle(this.x, this.y, 4);
     }

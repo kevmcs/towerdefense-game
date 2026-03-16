@@ -3,6 +3,7 @@ import { PATH_WAYPOINTS, TOWER_SPOTS, GAME_WIDTH, GAME_HEIGHT, PATH_WIDTH } from
 import { Enemy } from '../entities/Enemy';
 import { Tower } from '../entities/Tower';
 import { Projectile } from '../entities/Projectile';
+import { Bomb } from '../entities/Bomb';
 import { EconomyManager } from '../managers/EconomyManager';
 import { WaveManager } from '../managers/WaveManager';
 import { HUD } from '../ui/HUD';
@@ -17,6 +18,7 @@ export class GameScene extends Phaser.Scene {
   private enemies: Enemy[] = [];
   private towers: Tower[] = [];
   private projectiles: Projectile[] = [];
+  private bombs: Bomb[] = [];
 
   private occupiedSpots = new Set<number>();
   private towerMap = new Map<number, Tower>(); // spotIndex → Tower
@@ -41,6 +43,7 @@ export class GameScene extends Phaser.Scene {
     this.enemies = [];
     this.towers = [];
     this.projectiles = [];
+    this.bombs = [];
     this.occupiedSpots = new Set();
     this.towerMap = new Map();
     this.selectedSpotIndex = -1;
@@ -90,7 +93,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     for (const e of this.enemies) e.resetSlow();
-    for (const t of this.towers) t.update(delta, this.enemies, this.projectiles);
+    for (const t of this.towers) t.update(delta, this.enemies, this.projectiles, this.bombs);
 
     for (const e of this.enemies) {
       e.update(delta);
@@ -101,6 +104,9 @@ export class GameScene extends Phaser.Scene {
 
     for (const p of this.projectiles) p.update(delta);
     this.projectiles = this.projectiles.filter(p => p.alive);
+
+    for (const b of this.bombs) b.update(delta);
+    this.bombs = this.bombs.filter(b => b.alive);
 
     this.hud.update(this.economy.gold, this.economy.lives, this.waveManager.waveNumber, this.waveManager.totalWaves);
 
