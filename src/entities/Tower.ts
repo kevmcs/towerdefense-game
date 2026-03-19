@@ -100,17 +100,24 @@ export class Tower {
       if (unique.length === 0) return;
       // Pad to always fire exactly 2 — reuse closest if not enough unique targets
       const targets: Enemy[] = Array.from({ length: count }, (_, i) => unique[i % unique.length]);
-      for (const target of targets) {
+      const spread = 8; // perpendicular spawn offset so overlapping fireballs are visible
+      targets.forEach((target, i) => {
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        const offset = (i - (count - 1) / 2) * spread;
+        const ox = (-dy / len) * offset;
+        const oy = ( dx / len) * offset;
         projectiles.push(
           new Projectile(
-            this.scene, this.x, this.y, target,
+            this.scene, this.x + ox, this.y + oy, target,
             this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
             enemies,
             this.stats.ignoresArmor ?? false,
             true,
           ),
         );
-      }
+      });
     } else {
       const target = this.findTarget(enemies);
       if (!target) return;
