@@ -30,6 +30,8 @@ export class Tower {
   private effectiveSplashRadius: number;
 
   private fireCooldown = 0;
+  private burstTimer = 0;
+  private burstTarget: Enemy | null = null;
   private soldiers: Soldier[] = [];
   private isSelected = false;
 
@@ -60,6 +62,19 @@ export class Tower {
   // ── Update ────────────────────────────────────────────────────────────────
 
   update(delta: number, enemies: Enemy[], projectiles: Projectile[], bombs: Bomb[]) {
+    // Mage burst: fire the queued second fireball
+    if (this.burstTimer > 0) {
+      this.burstTimer -= delta;
+      if (this.burstTimer <= 0 && this.burstTarget?.alive) {
+        projectiles.push(new Projectile(
+          this.scene, this.x, this.y, this.burstTarget,
+          this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
+          enemies, this.stats.ignoresArmor ?? false, true,
+        ));
+        this.burstTarget = null;
+      }
+    }
+
     if (this.type === 'slow') {
       this.applySlowEffect(enemies);
     } else if (this.type === 'barracks') {
@@ -97,18 +112,13 @@ export class Tower {
     } else if (this.type === 'mage') {
       const closest = this.findTargets(enemies, 2);
       if (closest.length === 0) return;
-      const fireAt = (target: Enemy) => {
-        projectiles.push(new Projectile(
-          this.scene, this.x, this.y, target,
-          this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
-          enemies, this.stats.ignoresArmor ?? false, true,
-        ));
-      };
-      fireAt(closest[0]);
-      this.scene.time.delayedCall(220, () => {
-        const secondTarget = closest[1] ?? closest[0];
-        if (secondTarget.alive) fireAt(secondTarget);
-      });
+      projectiles.push(new Projectile(
+        this.scene, this.x, this.y, closest[0],
+        this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
+        enemies, this.stats.ignoresArmor ?? false, true,
+      ));
+      this.burstTarget = closest[1] ?? closest[0];
+      this.burstTimer = 220;
     } else {
       const target = this.findTarget(enemies);
       if (!target) return;
