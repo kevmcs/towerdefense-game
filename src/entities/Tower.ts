@@ -96,8 +96,7 @@ export class Tower {
       ));
     } else if (this.type === 'mage') {
       const count = this.level + 1; // L1=2, L2=3, L3=4
-      const alreadyTargeted = new Set(projectiles.filter(p => p.alive).map(p => p.target));
-      const targets = this.findTargets(enemies, count, alreadyTargeted);
+      const targets = this.findTargets(enemies, count);
       if (targets.length === 0) return;
       for (const target of targets) {
         projectiles.push(
