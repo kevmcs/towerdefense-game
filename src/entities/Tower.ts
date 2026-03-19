@@ -95,28 +95,19 @@ export class Tower {
         this.stats.ignoresArmor ?? false,
       ));
     } else if (this.type === 'mage') {
-      const count = 2;
-      const unique = this.findTargets(enemies, count);
-      if (unique.length === 0) return;
-      // Pad to always fire exactly 2 — reuse closest if not enough unique targets
-      const targets: Enemy[] = Array.from({ length: count }, (_, i) => unique[i % unique.length]);
-      const spread = 8; // perpendicular spawn offset so overlapping fireballs are visible
-      targets.forEach((target, i) => {
-        const dx = target.x - this.x;
-        const dy = target.y - this.y;
-        const len = Math.sqrt(dx * dx + dy * dy) || 1;
-        const offset = (i - (count - 1) / 2) * spread;
-        const ox = (-dy / len) * offset;
-        const oy = ( dx / len) * offset;
-        projectiles.push(
-          new Projectile(
-            this.scene, this.x + ox, this.y + oy, target,
-            this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
-            enemies,
-            this.stats.ignoresArmor ?? false,
-            true,
-          ),
-        );
+      const closest = this.findTargets(enemies, 2);
+      if (closest.length === 0) return;
+      const fireAt = (target: Enemy) => {
+        projectiles.push(new Projectile(
+          this.scene, this.x, this.y, target,
+          this.effectiveDamage, this.stats.projectileSpeed, this.stats.projectileColor,
+          enemies, this.stats.ignoresArmor ?? false, true,
+        ));
+      };
+      fireAt(closest[0]);
+      this.scene.time.delayedCall(220, () => {
+        const secondTarget = closest[1] ?? closest[0];
+        if (secondTarget.alive) fireAt(secondTarget);
       });
     } else {
       const target = this.findTarget(enemies);
