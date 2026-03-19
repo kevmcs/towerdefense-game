@@ -95,7 +95,7 @@ export class Tower {
         this.stats.ignoresArmor ?? false,
       ));
     } else if (this.type === 'mage') {
-      const count = this.level + 1; // L1=2, L2=3, L3=4
+      const count = 2;
       const targets = this.findTargets(enemies, count);
       if (targets.length === 0) return;
       for (const target of targets) {
