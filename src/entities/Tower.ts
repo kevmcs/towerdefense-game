@@ -118,7 +118,7 @@ export class Tower {
         enemies, this.stats.ignoresArmor ?? false, true,
       ));
       this.burstTarget = closest[1] ?? closest[0];
-      this.burstTimer = 220;
+      this.burstTimer = 100;
     } else {
       const target = this.findTarget(enemies);
       if (!target) return;
