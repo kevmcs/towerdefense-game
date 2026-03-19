@@ -96,8 +96,10 @@ export class Tower {
       ));
     } else if (this.type === 'mage') {
       const count = 2;
-      const targets = this.findTargets(enemies, count);
-      if (targets.length === 0) return;
+      const unique = this.findTargets(enemies, count);
+      if (unique.length === 0) return;
+      // Pad to always fire exactly 2 — reuse closest if not enough unique targets
+      const targets: Enemy[] = Array.from({ length: count }, (_, i) => unique[i % unique.length]);
       for (const target of targets) {
         projectiles.push(
           new Projectile(
