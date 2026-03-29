@@ -58,7 +58,7 @@ export const TOWER_DATA: Record<string, TowerStats> = {
     name: 'Barracks',
     description: 'Spawns soldiers',
     cost: 125,
-    range: 0,
+    range: 110,
     damage: 18,
     fireRate: 0,
     color: 0xe67e22,

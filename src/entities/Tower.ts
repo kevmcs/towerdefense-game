@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import type { TowerStats } from '../data/towerData';
 import { UPGRADE_DATA } from '../data/upgradeData';
-import { PATH_WAYPOINTS } from '../config';
 import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
 import { Bomb } from './Bomb';
@@ -220,7 +219,10 @@ export class Tower {
     if (this.type === 'barracks') {
       // L3 unlocks a 3rd soldier slot
       if (this.level === 3) this.spawnSoldier();
-      for (const s of this.soldiers) s.damage = this.effectiveDamage;
+      for (const s of this.soldiers) {
+        s.damage     = this.effectiveDamage;
+        s.towerRange = this.effectiveRange;
+      }
     }
 
     this.draw();
@@ -260,37 +262,19 @@ export class Tower {
   }
 
   private spawnSoldier() {
-    const maxSlots = this.level === 3 ? 3 : (this.stats.soldierCount ?? 2);
+    const maxSlots  = this.level === 3 ? 3 : (this.stats.soldierCount ?? 2);
     if (this.soldiers.length >= maxSlots) return;
-    const post = this.closestPathPoint();
-    const idx  = this.soldiers.length;
-    const xOff = (idx - (maxSlots - 1) / 2) * 22;
+    // Spread siblings side-by-side on the path (-12 / 0 / +12 px offset)
+    const idx        = this.soldiers.length;
+    const sideOffset = (idx - (maxSlots - 1) / 2) * 12;
     this.soldiers.push(
       new Soldier(
         this.scene, this.x, this.y,
-        post.x + xOff, post.y,
+        this.effectiveRange, sideOffset,
         this.effectiveDamage,
         () => { this.respawnTimers.push(Tower.RESPAWN_DELAY); },
       ),
     );
-  }
-
-  private closestPathPoint(): { x: number; y: number } {
-    let best = { x: PATH_WAYPOINTS[0].x, y: PATH_WAYPOINTS[0].y };
-    let bestDist = Infinity;
-    for (let i = 0; i < PATH_WAYPOINTS.length - 1; i++) {
-      const p = PATH_WAYPOINTS[i];
-      const q = PATH_WAYPOINTS[i + 1];
-      const dx = q.x - p.x;
-      const dy = q.y - p.y;
-      const len2 = dx * dx + dy * dy;
-      const t = Math.max(0, Math.min(1, ((this.x - p.x) * dx + (this.y - p.y) * dy) / len2));
-      const cx = p.x + t * dx;
-      const cy = p.y + t * dy;
-      const d = Math.sqrt((this.x - cx) ** 2 + (this.y - cy) ** 2);
-      if (d < bestDist) { bestDist = d; best = { x: cx, y: cy }; }
-    }
-    return best;
   }
 
   // ── Drawing ───────────────────────────────────────────────────────────────

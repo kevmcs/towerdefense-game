@@ -1,51 +1,120 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
+import { PATH_WAYPOINTS } from '../config';
 
-type SoldierState = 'toPost' | 'atPost' | 'engaging' | 'fighting';
+type SoldierState = 'toPost' | 'atPost' | 'engaging' | 'fighting' | 'returning';
 
-const WALK_SPEED       = 90;   // px/s walking to post
-const ENGAGE_SPEED     = 110;  // px/s chasing enemy
-const ENGAGEMENT_RANGE = 120;  // px — start chasing enemy within this distance
-const MELEE_RANGE      = 20;   // px — stop and fight
-const ATTACK_RATE      = 1.2;  // attacks per second
-const COUNTER_RATE     = 1.0;  // enemy counterattacks per second
-const MAX_HP           = 100;
+const WALK_SPEED   = 90;
+const ENGAGE_SPEED = 110;
+const MELEE_RANGE  = 20;
+const ATTACK_RATE  = 1.2;   // attacks per second
+const COUNTER_RATE = 1.0;   // enemy hits per second
+const MAX_HP       = 100;
+
+// ── Path-progress helpers ─────────────────────────────────────────────────────
+// "progress" = total distance from path start to a point on the path.
+
+function getPathPosition(progress: number): { x: number; y: number } {
+  let remaining = progress;
+  for (let i = 0; i < PATH_WAYPOINTS.length - 1; i++) {
+    const p = PATH_WAYPOINTS[i];
+    const q = PATH_WAYPOINTS[i + 1];
+    const dx = q.x - p.x;
+    const dy = q.y - p.y;
+    const segLen = Math.sqrt(dx * dx + dy * dy);
+    if (remaining <= segLen) {
+      const t = remaining / segLen;
+      return { x: p.x + dx * t, y: p.y + dy * t };
+    }
+    remaining -= segLen;
+  }
+  const last = PATH_WAYPOINTS[PATH_WAYPOINTS.length - 1];
+  return { x: last.x, y: last.y };
+}
+
+function getProgressAtPoint(px: number, py: number): number {
+  let totalDist = 0;
+  let bestProgress = 0;
+  let bestDistSq   = Infinity;
+  for (let i = 0; i < PATH_WAYPOINTS.length - 1; i++) {
+    const p = PATH_WAYPOINTS[i];
+    const q = PATH_WAYPOINTS[i + 1];
+    const dx = q.x - p.x;
+    const dy = q.y - p.y;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, ((px - p.x) * dx + (py - p.y) * dy) / len2)) : 0;
+    const cx = p.x + dx * t;
+    const cy = p.y + dy * t;
+    const dSq = (px - cx) ** 2 + (py - cy) ** 2;
+    const segProgress = totalDist + t * Math.sqrt(len2);
+    if (dSq < bestDistSq) { bestDistSq = dSq; bestProgress = segProgress; }
+    totalDist += Math.sqrt(len2);
+  }
+  return bestProgress;
+}
+
+// ── Soldier ───────────────────────────────────────────────────────────────────
 
 export class Soldier {
   x: number;
   y: number;
   private scene: Phaser.Scene;
-  private postX: number;
-  private postY: number;
+  private readonly towerX: number;
+  private readonly towerY: number;
+  towerRange: number;
+
+  // home = closest point on path to the barracks tower (rest position)
+  private readonly homeProgress: number;
+  private readonly homeX: number;
+  private readonly homeY: number;
+  // current path-progress when following the path
+  private pathProgress: number;
+
   private graphics: Phaser.GameObjects.Graphics;
 
-  hp = MAX_HP;
+  hp      = MAX_HP;
   readonly maxHp = MAX_HP;
   damage: number;
-  alive = true;
+  alive   = true;
 
-  private state: SoldierState = 'toPost';
-  private target: Enemy | null = null;
-  private attackCooldown = 0;
-  private counterCooldown = 1000 / COUNTER_RATE;
+  private state: SoldierState        = 'toPost';
+  private target: Enemy | null       = null;
+  private attackCooldown             = 0;
+  private counterCooldown            = 1000 / COUNTER_RATE;
   private readonly onDeath: () => void;
 
   constructor(
     scene: Phaser.Scene,
-    startX: number,
-    startY: number,
-    postX: number,
-    postY: number,
+    towerX: number,
+    towerY: number,
+    towerRange: number,
+    sideOffset: number,   // perpendicular offset so siblings don't overlap at rest
     damage: number,
     onDeath: () => void,
   ) {
-    this.scene   = scene;
-    this.x       = startX;
-    this.y       = startY;
-    this.postX   = postX;
-    this.postY   = postY;
-    this.damage  = damage;
-    this.onDeath = onDeath;
+    this.scene      = scene;
+    this.towerX     = towerX;
+    this.towerY     = towerY;
+    this.towerRange = towerRange;
+    this.damage     = damage;
+    this.onDeath    = onDeath;
+
+    this.x = towerX;
+    this.y = towerY;
+
+    // Find closest point on path to the tower
+    this.homeProgress = getProgressAtPoint(towerX, towerY);
+    const homePos     = getPathPosition(this.homeProgress);
+
+    // Compute perpendicular to path direction at home — used for side-by-side offset
+    const aheadPos = getPathPosition(this.homeProgress + 8);
+    const dirX = aheadPos.x - homePos.x;
+    const dirY = aheadPos.y - homePos.y;
+    const dirLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+    this.homeX = homePos.x + (-dirY / dirLen) * sideOffset;
+    this.homeY = homePos.y + ( dirX / dirLen) * sideOffset;
+
+    this.pathProgress = this.homeProgress;
     this.graphics = scene.add.graphics().setDepth(3);
     this.draw();
   }
@@ -54,25 +123,27 @@ export class Soldier {
     if (!this.alive) return;
 
     switch (this.state) {
-      case 'toPost':    this.updateToPost(delta);        break;
-      case 'atPost':    this.updateAtPost(enemies);      break;
-      case 'engaging':  this.updateEngaging(delta);      break;
-      case 'fighting':  this.updateFighting(delta);      break;
+      case 'toPost':    this.updateToPost(delta);    break;
+      case 'atPost':    this.updateAtPost(enemies);  break;
+      case 'engaging':  this.updateEngaging(delta);  break;
+      case 'fighting':  this.updateFighting(delta);  break;
+      case 'returning': this.updateReturning(delta); break;
     }
 
     this.draw();
   }
 
-  // ── States ──────────────────────────────────────────────────────────────────
+  // ── States ────────────────────────────────────────────────────────────────────
 
   private updateToPost(delta: number) {
-    const dx   = this.postX - this.x;
-    const dy   = this.postY - this.y;
+    const dx   = this.homeX - this.x;
+    const dy   = this.homeY - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const step = WALK_SPEED * (delta / 1000);
     if (dist <= step) {
-      this.x = this.postX;
-      this.y = this.postY;
+      this.x = this.homeX;
+      this.y = this.homeY;
+      this.pathProgress = this.homeProgress;
       this.state = 'atPost';
     } else {
       this.x += (dx / dist) * step;
@@ -81,57 +152,80 @@ export class Soldier {
   }
 
   private updateAtPost(enemies: Enemy[]) {
+    // Enemies are checked against tower position (not soldier) to match range indicator
     let nearest: Enemy | null = null;
-    let nearestDist = ENGAGEMENT_RANGE;
+    let nearestDist = Infinity;
     for (const e of enemies) {
       if (!e.alive) continue;
-      const dx = e.x - this.x;
-      const dy = e.y - this.y;
+      const dx = e.x - this.towerX;
+      const dy = e.y - this.towerY;
       const d  = Math.sqrt(dx * dx + dy * dy);
-      if (d < nearestDist) { nearest = e; nearestDist = d; }
+      if (d <= this.towerRange && d < nearestDist) { nearest = e; nearestDist = d; }
     }
     if (nearest) {
-      this.target = nearest;
-      this.state  = 'engaging';
+      this.target       = nearest;
+      this.pathProgress = this.homeProgress;
+      this.state        = 'engaging';
     }
   }
 
   private updateEngaging(delta: number) {
     if (!this.target || !this.target.alive) {
       this.clearTarget();
-      this.state = 'toPost';
+      this.state = 'returning';
       return;
     }
 
+    // Return if soldier wandered beyond tower range
+    const dtx = this.x - this.towerX;
+    const dty = this.y - this.towerY;
+    if (Math.sqrt(dtx * dtx + dty * dty) > this.towerRange + 10) {
+      this.clearTarget();
+      this.pathProgress = getProgressAtPoint(this.x, this.y);
+      this.state = 'returning';
+      return;
+    }
+
+    // Enter melee range → fight
     const dx   = this.target.x - this.x;
     const dy   = this.target.y - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-
     if (dist <= MELEE_RANGE) {
       this.target.blockers++;
       this.attackCooldown  = 1000 / ATTACK_RATE;
       this.counterCooldown = 1000 / COUNTER_RATE;
       this.state = 'fighting';
-    } else {
-      const step = ENGAGE_SPEED * (delta / 1000);
-      this.x += (dx / dist) * step;
-      this.y += (dy / dist) * step;
+      return;
     }
+
+    // Walk along path toward enemy (path-progress based)
+    const enemyProgress = getProgressAtPoint(this.target.x, this.target.y);
+    const step = ENGAGE_SPEED * (delta / 1000);
+    if (enemyProgress > this.pathProgress) {
+      this.pathProgress = Math.min(this.pathProgress + step, enemyProgress);
+    } else {
+      this.pathProgress = Math.max(this.pathProgress - step, enemyProgress);
+    }
+    const pos = getPathPosition(this.pathProgress);
+    this.x = pos.x;
+    this.y = pos.y;
   }
 
   private updateFighting(delta: number) {
     if (!this.target || !this.target.alive) {
       this.clearTarget();
-      this.state = 'toPost';
+      this.pathProgress = getProgressAtPoint(this.x, this.y);
+      this.state = 'returning';
       return;
     }
 
-    // Re-engage if target somehow drifted out of melee range
+    // Re-engage if target drifted out of melee range
     const dx   = this.target.x - this.x;
     const dy   = this.target.y - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist > MELEE_RANGE + 10) {
       this.target.blockers = Math.max(0, this.target.blockers - 1);
+      this.pathProgress    = getProgressAtPoint(this.x, this.y);
       this.state = 'engaging';
       return;
     }
@@ -151,7 +245,26 @@ export class Soldier {
     }
   }
 
-  // ── Damage / Death ───────────────────────────────────────────────────────────
+  private updateReturning(delta: number) {
+    if (Math.abs(this.pathProgress - this.homeProgress) < 3) {
+      this.x = this.homeX;
+      this.y = this.homeY;
+      this.pathProgress = this.homeProgress;
+      this.state = 'atPost';
+      return;
+    }
+    const step = WALK_SPEED * (delta / 1000);
+    if (this.pathProgress > this.homeProgress) {
+      this.pathProgress = Math.max(this.pathProgress - step, this.homeProgress);
+    } else {
+      this.pathProgress = Math.min(this.pathProgress + step, this.homeProgress);
+    }
+    const pos = getPathPosition(this.pathProgress);
+    this.x = pos.x;
+    this.y = pos.y;
+  }
+
+  // ── Damage / Death ────────────────────────────────────────────────────────────
 
   takeDamage(amount: number) {
     if (!this.alive) return;
@@ -196,14 +309,14 @@ export class Soldier {
     const by   = this.y - 16;
     this.graphics.fillStyle(0x2c2c2c);
     this.graphics.fillRect(bx, by, barW, 3);
-    const pct = this.hp / this.maxHp;
+    const pct     = this.hp / this.maxHp;
     const hpColor = pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c;
     this.graphics.fillStyle(hpColor);
     this.graphics.fillRect(bx, by, barW * pct, 3);
 
     // Body
-    const bodyColor = this.state === 'fighting' ? 0xffd700
-                    : this.state === 'engaging'  ? 0xf0a030
+    const bodyColor = this.state === 'fighting'  ? 0xffd700
+                    : this.state === 'engaging'   ? 0xf0a030
                     : 0xe67e22;
     this.graphics.fillStyle(bodyColor);
     this.graphics.fillRect(this.x - 8, this.y - 8, 16, 16);
@@ -218,14 +331,14 @@ export class Soldier {
       const nx   = dx / dist;
       const ny   = dy / dist;
 
-      // Blade — from soldier edge toward enemy
+      // Blade
       this.graphics.lineStyle(3, 0xffffff, 0.9);
       this.graphics.beginPath();
       this.graphics.moveTo(this.x + nx * 8,        this.y + ny * 8);
       this.graphics.lineTo(this.x + nx * (8 + 13), this.y + ny * (8 + 13));
       this.graphics.strokePath();
 
-      // Crossguard — perpendicular to blade
+      // Crossguard
       const px = -ny;
       const py =  nx;
       this.graphics.lineStyle(2, 0xcccccc, 0.85);
