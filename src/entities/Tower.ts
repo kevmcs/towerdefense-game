@@ -33,7 +33,10 @@ export class Tower {
   private burstTimer = 0;
   private burstTarget: Enemy | null = null;
   private soldiers: Soldier[] = [];
+  private respawnTimers: number[] = [];
   private isSelected = false;
+
+  private static readonly RESPAWN_DELAY = 6000; // ms before a dead soldier respawns
 
   constructor(scene: Phaser.Scene, x: number, y: number, type: string, stats: TowerStats) {
     this.scene = scene;
@@ -78,6 +81,16 @@ export class Tower {
     if (this.type === 'slow') {
       this.applySlowEffect(enemies);
     } else if (this.type === 'barracks') {
+      // Tick respawn timers and spawn new soldiers when ready
+      for (let i = this.respawnTimers.length - 1; i >= 0; i--) {
+        this.respawnTimers[i] -= delta;
+        if (this.respawnTimers[i] <= 0) {
+          this.respawnTimers.splice(i, 1);
+          this.spawnSoldier();
+        }
+      }
+      // Remove dead soldiers (they destroy themselves on death)
+      this.soldiers = this.soldiers.filter(s => s.alive);
       for (const s of this.soldiers) s.update(delta, enemies);
     } else {
       this.updateShooter(delta, enemies, projectiles, bombs);
@@ -204,13 +217,9 @@ export class Tower {
     this.effectiveSplashRadius = this.stats.splashRadius * tier.rangeMultiplier;
     if (tier.slowFactor !== undefined) this.effectiveSlowFactor = tier.slowFactor;
 
-    // Barracks L3: spawn a 3rd soldier
-    if (this.type === 'barracks' && this.level === 3) {
-      const post = this.closestPathPoint();
-      this.soldiers.push(new Soldier(this.scene, this.x, this.y, post.x + 22, post.y - 10, this.effectiveDamage));
-      // Update existing soldiers' damage
-      for (const s of this.soldiers) s.damage = this.effectiveDamage;
-    } else if (this.type === 'barracks') {
+    if (this.type === 'barracks') {
+      // L3 unlocks a 3rd soldier slot
+      if (this.level === 3) this.spawnSoldier();
       for (const s of this.soldiers) s.damage = this.effectiveDamage;
     }
 
@@ -247,13 +256,23 @@ export class Tower {
 
   private initSoldiers() {
     const count = this.stats.soldierCount ?? 2;
+    for (let i = 0; i < count; i++) this.spawnSoldier();
+  }
+
+  private spawnSoldier() {
+    const maxSlots = this.level === 3 ? 3 : (this.stats.soldierCount ?? 2);
+    if (this.soldiers.length >= maxSlots) return;
     const post = this.closestPathPoint();
-    for (let i = 0; i < count; i++) {
-      const xOff = (i - (count - 1) / 2) * 22;
-      this.soldiers.push(
-        new Soldier(this.scene, this.x, this.y, post.x + xOff, post.y, this.effectiveDamage),
-      );
-    }
+    const idx  = this.soldiers.length;
+    const xOff = (idx - (maxSlots - 1) / 2) * 22;
+    this.soldiers.push(
+      new Soldier(
+        this.scene, this.x, this.y,
+        post.x + xOff, post.y,
+        this.effectiveDamage,
+        () => { this.respawnTimers.push(Tower.RESPAWN_DELAY); },
+      ),
+    );
   }
 
   private closestPathPoint(): { x: number; y: number } {
@@ -345,7 +364,8 @@ export class Tower {
   destroyTower() {
     this.graphics.destroy();
     this.rangeGraphics.destroy();
-    for (const s of this.soldiers) s.destroy();
     this.levelBadge?.destroy();
+    this.respawnTimers = [];
+    for (const s of this.soldiers) s.destroy();
   }
 }

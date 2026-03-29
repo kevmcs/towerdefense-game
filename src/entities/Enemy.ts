@@ -24,6 +24,9 @@ export class Enemy {
   private waypointIndex = 1;
 
   slowMultiplier = 1;
+  /** Number of soldiers currently blocking this enemy (prevents movement). */
+  blockers = 0;
+  meleeDamage: number;
 
   constructor(scene: Phaser.Scene, type = 'goblin') {
     this.scene = scene;
@@ -37,6 +40,7 @@ export class Enemy {
     this.radius = stats.radius;
     this.armor = stats.armor ?? 0;
     this.isBoss = stats.isBoss ?? false;
+    this.meleeDamage = stats.meleeDamage;
 
     this.x = PATH_WAYPOINTS[0].x;
     this.y = PATH_WAYPOINTS[0].y;
@@ -56,6 +60,7 @@ export class Enemy {
 
   update(delta: number) {
     if (!this.alive || this.reachedEnd) return;
+    if (this.blockers > 0) { this.draw(); return; }
 
     const effectiveSpeed = this.speed * this.slowMultiplier;
     const target = PATH_WAYPOINTS[this.waypointIndex];
