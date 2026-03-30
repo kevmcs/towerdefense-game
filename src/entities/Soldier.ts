@@ -9,7 +9,7 @@ const ENGAGE_SPEED = 110;
 const MELEE_RANGE  = 20;
 const ATTACK_RATE  = 1.2;   // attacks per second
 const COUNTER_RATE = 1.0;   // enemy hits per second
-const MAX_HP       = 100;
+const MAX_HP       = 50;
 
 // ── Path-progress helpers ─────────────────────────────────────────────────────
 // "progress" = total distance from path start to a point on the path.
