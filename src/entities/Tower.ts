@@ -282,7 +282,7 @@ export class Tower {
     if (this.soldiers.length >= maxSlots) return;
     // Spread siblings side-by-side on the path (-12 / 0 / +12 px offset)
     const idx        = this.soldiers.length;
-    const sideOffset = (idx - (maxSlots - 1) / 2) * 12;
+    const sideOffset = (idx - (maxSlots - 1) / 2) * 22;
     this.soldiers.push(
       new Soldier(
         this.scene, this.x, this.y,
