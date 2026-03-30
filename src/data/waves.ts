@@ -53,16 +53,17 @@ export const WAVES: WaveDef[] = [
     ],
     reward: 55,
   },
-  // Wave 5 — armored introduction
+  // Wave 5 — MINI BOSS + armored
   {
     spawns: [
-      { type: 'goblin',  delay: 0 },
-      { type: 'goblin',  delay: 800 },
-      { type: 'armored', delay: 1800 },
-      { type: 'orc',     delay: 1200 },
-      { type: 'armored', delay: 2000 },
+      { type: 'goblin',   delay: 0 },
+      { type: 'goblin',   delay: 800 },
+      { type: 'miniboss', delay: 2200 },
+      { type: 'orc',      delay: 1200 },
+      { type: 'armored',  delay: 2000 },
     ],
-    reward: 65,
+    reward: 80,
+    hasBoss: true,
   },
   // Wave 6 — sprinter + armored mix
   {

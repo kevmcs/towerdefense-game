@@ -29,7 +29,13 @@ export class Enemy {
   meleeDamage!: number;
   private fireballCooldown = 3000; // ms before first fireball
 
-  get isBoss(): boolean { return this.isBoss_; }
+  private shieldHp        = 0;
+  private maxShieldHp     = 0;
+  private speedBoostMult  = 1;
+  private baseSpeed       = 0;
+
+  get isBoss(): boolean    { return this.isBoss_; }
+  get shieldActive(): boolean { return this.shieldHp > 0; }
 
   constructor(scene: Phaser.Scene, type = 'goblin') {
     this.scene = scene;
@@ -42,8 +48,12 @@ export class Enemy {
     this.color = stats.color;
     this.radius = stats.radius;
     this.armor = stats.armor ?? 0;
-    this.isBoss_ = stats.isBoss ?? false;
-    this.meleeDamage = stats.meleeDamage;
+    this.isBoss_      = stats.isBoss ?? false;
+    this.meleeDamage  = stats.meleeDamage;
+    this.baseSpeed    = stats.speed;
+    this.shieldHp     = stats.shieldHp ?? 0;
+    this.maxShieldHp  = stats.shieldHp ?? 0;
+    this.speedBoostMult = stats.speedBoostOnShieldBreak ?? 1;
 
     this.x = PATH_WAYPOINTS[0].x;
     this.y = PATH_WAYPOINTS[0].y;
@@ -104,6 +114,19 @@ export class Enemy {
   }
 
   takeDamage(amount: number, ignoresArmor = false) {
+    if (this.shieldHp > 0) {
+      if (!ignoresArmor) {
+        // Non-mage towers: shield blocks 100% — no damage
+        return;
+      }
+      // Mage (ignoresArmor): shield only defends 20%, 80% hits the shield
+      this.shieldHp -= amount * 0.8;
+      if (this.shieldHp <= 0) {
+        this.shieldHp = 0;
+        this.breakShield();
+      }
+      return;
+    }
     const effective = ignoresArmor ? amount : amount * (1 - this.armor);
     this.hp -= effective;
     if (this.hp <= 0) {
@@ -111,6 +134,21 @@ export class Enemy {
       this.spawnDeathEffect();
       this.destroy();
     }
+  }
+
+  private breakShield() {
+    this.speed = Math.round(this.baseSpeed * this.speedBoostMult);
+    // Visual burst
+    const g = this.scene.add.graphics().setDepth(7);
+    g.lineStyle(4, 0x00ccff, 1);
+    g.strokeCircle(this.x, this.y, this.radius + 12);
+    g.fillStyle(0x00eeff, 0.25);
+    g.fillCircle(this.x, this.y, this.radius + 12);
+    this.scene.tweens.add({
+      targets: g, alpha: 0, scaleX: 2.5, scaleY: 2.5,
+      duration: 450, ease: 'Power2',
+      onComplete: () => g.destroy(),
+    });
   }
 
   private spawnDeathEffect() {
@@ -146,6 +184,18 @@ export class Enemy {
       this.graphics.strokeCircle(this.x, this.y, this.radius + 5);
     }
 
+    // Mini-boss shield glow
+    if (this.shieldHp > 0) {
+      const pulse  = 0.55 + 0.35 * Math.sin(this.scene.time.now * 0.006);
+      const shieldPct = this.shieldHp / this.maxShieldHp;
+      this.graphics.fillStyle(0x00ccff, 0.15 * shieldPct);
+      this.graphics.fillCircle(this.x, this.y, this.radius + 13);
+      this.graphics.lineStyle(3, 0x00eeff, pulse * shieldPct);
+      this.graphics.strokeCircle(this.x, this.y, this.radius + 13);
+      this.graphics.lineStyle(1.5, 0x88ddff, 0.5 * shieldPct);
+      this.graphics.strokeCircle(this.x, this.y, this.radius + 8);
+    }
+
     // Body
     this.graphics.fillStyle(this.color);
     this.graphics.fillCircle(this.x, this.y, this.radius);
@@ -162,14 +212,24 @@ export class Enemy {
     // HP bar
     this.hpBar.clear();
     const barW = this.radius * 2 + (this.isBoss_ ? 20 : 4);
-    const bx = this.x - barW / 2;
-    const by = this.y - this.radius - (this.isBoss_ ? 14 : 9);
+    const bx   = this.x - barW / 2;
+    const by   = this.y - this.radius - (this.isBoss_ ? 14 : 9);
     this.hpBar.fillStyle(0x2c2c2c);
     this.hpBar.fillRect(bx, by, barW, this.isBoss_ ? 6 : 4);
     const pct = Math.max(0, this.hp / this.maxHp);
     const hpColor = pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c;
     this.hpBar.fillStyle(hpColor);
     this.hpBar.fillRect(bx, by, barW * pct, this.isBoss_ ? 6 : 4);
+
+    // Shield HP bar (above HP bar)
+    if (this.maxShieldHp > 0) {
+      const sby = by - 6;
+      this.hpBar.fillStyle(0x1a1a2e);
+      this.hpBar.fillRect(bx, sby, barW, 4);
+      const shieldPct = Math.max(0, this.shieldHp / this.maxShieldHp);
+      this.hpBar.fillStyle(0x00ccff);
+      this.hpBar.fillRect(bx, sby, barW * shieldPct, 4);
+    }
   }
 
   containsPoint(px: number, py: number): boolean {
