@@ -103,7 +103,13 @@ export class Tower {
       for (const s of this.soldiers) {
         if (!s.isAtPost) continue;
         const unclaimed = inRange.find(e => !claimed.has(e));
-        if (unclaimed) { s.assignTarget(unclaimed); claimed.add(unclaimed); }
+        if (unclaimed) {
+          s.assignTarget(unclaimed);
+          claimed.add(unclaimed);
+        } else if (inRange.length > 0) {
+          // Fewer enemies than soldiers — pile onto the nearest one
+          s.assignTarget(inRange[0]);
+        }
       }
 
       for (const s of this.soldiers) s.update(delta, enemies);
