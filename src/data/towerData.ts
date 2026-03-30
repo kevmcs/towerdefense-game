@@ -52,7 +52,7 @@ export const TOWER_DATA: Record<string, TowerStats> = {
     projectileColor: 0x1abc9c,
     projectileSpeed: 0,
     splashRadius: 0,
-    slowFactor: 0.45,
+    slowFactor: 0.55,
   },
   barracks: {
     name: 'Barracks',
