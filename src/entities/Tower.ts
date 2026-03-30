@@ -113,6 +113,30 @@ export class Tower {
         }
       }
 
+      // If new enemies entered range while soldiers are doubled-up, split one off
+      const unclaimed = inRange.filter(e => !claimed.has(e));
+      if (unclaimed.length > 0) {
+        // Group active soldiers by their current target
+        const byTarget = new Map<Enemy, Soldier[]>();
+        for (const s of this.soldiers) {
+          const t = s.currentTarget;
+          if (t?.alive) {
+            if (!byTarget.has(t)) byTarget.set(t, []);
+            byTarget.get(t)!.push(s);
+          }
+        }
+        for (const newEnemy of unclaimed) {
+          // Find a target that has 2+ soldiers on it and steal one
+          for (const [, group] of byTarget) {
+            if (group.length >= 2) {
+              group.pop()!.assignTarget(newEnemy);
+              claimed.add(newEnemy);
+              break;
+            }
+          }
+        }
+      }
+
       for (const s of this.soldiers) s.update(delta, enemies);
     } else {
       this.updateShooter(delta, enemies, projectiles, bombs);

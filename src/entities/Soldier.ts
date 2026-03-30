@@ -151,11 +151,13 @@ export class Soldier {
     }
   }
 
-  // Tower calls this to assign a specific enemy target to an idle soldier.
+  // Tower calls this to assign or reassign a target.
   assignTarget(e: Enemy) {
-    this.target       = e;
-    this.pathProgress = this.homeProgress;
-    this.state        = 'engaging';
+    this.clearTarget(); // release old blocker if any
+    this.target = e;
+    // Only rewind to home if the soldier is idle; mid-path soldiers engage from where they are
+    if (this.state === 'atPost') this.pathProgress = this.homeProgress;
+    this.state = 'engaging';
   }
 
   get isAtPost(): boolean { return this.state === 'atPost'; }
