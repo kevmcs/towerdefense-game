@@ -190,7 +190,8 @@ export class Soldier {
     if (dist <= MELEE_RANGE) {
       this.target.blockers++;
       this.attackCooldown  = 1000 / ATTACK_RATE;
-      this.counterCooldown = 1000 / COUNTER_RATE;
+      // Boss eats soldiers immediately on contact
+      this.counterCooldown = this.target.type === 'boss' ? 100 : 1000 / COUNTER_RATE;
       this.state = 'fighting';
       return;
     }

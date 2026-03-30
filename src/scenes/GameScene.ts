@@ -4,6 +4,7 @@ import { Enemy } from '../entities/Enemy';
 import { Tower } from '../entities/Tower';
 import { Projectile } from '../entities/Projectile';
 import { Bomb } from '../entities/Bomb';
+import { BossFireball, FIREBALL_RANGE } from '../entities/BossFireball';
 import { EconomyManager } from '../managers/EconomyManager';
 import { WaveManager } from '../managers/WaveManager';
 import { HUD } from '../ui/HUD';
@@ -19,6 +20,7 @@ export class GameScene extends Phaser.Scene {
   private towers: Tower[] = [];
   private projectiles: Projectile[] = [];
   private bombs: Bomb[] = [];
+  private bossFireballs: BossFireball[] = [];
 
   private occupiedSpots = new Set<number>();
   private towerMap = new Map<number, Tower>(); // spotIndex → Tower
@@ -107,6 +109,23 @@ export class GameScene extends Phaser.Scene {
 
     for (const b of this.bombs) b.update(delta);
     this.bombs = this.bombs.filter(b => b.alive);
+
+    // Boss fireballs
+    for (const e of this.enemies) {
+      if (e.tickBossFireball(delta)) {
+        // Find nearest tower within fireball range
+        let nearest: Tower | null = null;
+        let nearestDist = FIREBALL_RANGE;
+        for (const t of this.towers) {
+          const dx = t.x - e.x; const dy = t.y - e.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < nearestDist) { nearest = t; nearestDist = d; }
+        }
+        if (nearest) this.bossFireballs.push(new BossFireball(this, e.x, e.y, nearest));
+      }
+    }
+    for (const f of this.bossFireballs) f.update(delta);
+    this.bossFireballs = this.bossFireballs.filter(f => f.alive);
 
     this.hud.update(this.economy.gold, this.economy.lives, this.waveManager.waveNumber, this.waveManager.totalWaves);
 

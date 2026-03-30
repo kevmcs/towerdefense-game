@@ -20,13 +20,16 @@ export class Enemy {
   private color: number;
   radius: number;
   private armor: number;
-  private isBoss: boolean;
+  private isBoss_!: boolean;
   private waypointIndex = 1;
 
   slowMultiplier = 1;
   /** Number of soldiers currently blocking this enemy (prevents movement). */
   blockers = 0;
-  meleeDamage: number;
+  meleeDamage!: number;
+  private fireballCooldown = 3000; // ms before first fireball
+
+  get isBoss(): boolean { return this.isBoss_; }
 
   constructor(scene: Phaser.Scene, type = 'goblin') {
     this.scene = scene;
@@ -39,7 +42,7 @@ export class Enemy {
     this.color = stats.color;
     this.radius = stats.radius;
     this.armor = stats.armor ?? 0;
-    this.isBoss = stats.isBoss ?? false;
+    this.isBoss_ = stats.isBoss ?? false;
     this.meleeDamage = stats.meleeDamage;
 
     this.x = PATH_WAYPOINTS[0].x;
@@ -56,6 +59,20 @@ export class Enemy {
 
   applySlow(factor: number) {
     this.slowMultiplier = Math.min(this.slowMultiplier, factor);
+  }
+
+  /**
+   * Called each frame by GameScene for boss enemies.
+   * Returns true on the frame the boss should fire a fireball.
+   */
+  tickBossFireball(delta: number): boolean {
+    if (!this.isBoss_ || !this.alive) return false;
+    this.fireballCooldown -= delta;
+    if (this.fireballCooldown <= 0) {
+      this.fireballCooldown = 6000;
+      return true;
+    }
+    return false;
   }
 
   update(delta: number) {
@@ -98,16 +115,16 @@ export class Enemy {
 
   private spawnDeathEffect() {
     const g = this.scene.add.graphics().setDepth(7);
-    const deathColor = this.isBoss ? 0xff0000 : this.color;
+    const deathColor = this.isBoss_ ? 0xff0000 : this.color;
     g.fillStyle(deathColor, 0.7);
-    g.fillCircle(this.x, this.y, this.radius * (this.isBoss ? 2.5 : 1.8));
+    g.fillCircle(this.x, this.y, this.radius * (this.isBoss_ ? 2.5 : 1.8));
 
     this.scene.tweens.add({
       targets: g,
       scaleX: 2.2,
       scaleY: 2.2,
       alpha: 0,
-      duration: this.isBoss ? 600 : 300,
+      duration: this.isBoss_ ? 600 : 300,
       ease: 'Power2',
       onComplete: () => g.destroy(),
     });
@@ -123,7 +140,7 @@ export class Enemy {
     }
 
     // Boss pulsing glow
-    if (this.isBoss) {
+    if (this.isBoss_) {
       const pulse = 0.35 + 0.25 * Math.sin(this.scene.time.now * 0.004);
       this.graphics.lineStyle(4, 0xff4444, pulse);
       this.graphics.strokeCircle(this.x, this.y, this.radius + 5);
@@ -134,7 +151,7 @@ export class Enemy {
     this.graphics.fillCircle(this.x, this.y, this.radius);
 
     // Armor indicator — silver outline for armored enemies
-    if (this.armor > 0 && !this.isBoss) {
+    if (this.armor > 0 && !this.isBoss_) {
       this.graphics.lineStyle(3, 0xbdc3c7);
       this.graphics.strokeCircle(this.x, this.y, this.radius);
     } else {
@@ -144,15 +161,15 @@ export class Enemy {
 
     // HP bar
     this.hpBar.clear();
-    const barW = this.radius * 2 + (this.isBoss ? 20 : 4);
+    const barW = this.radius * 2 + (this.isBoss_ ? 20 : 4);
     const bx = this.x - barW / 2;
-    const by = this.y - this.radius - (this.isBoss ? 14 : 9);
+    const by = this.y - this.radius - (this.isBoss_ ? 14 : 9);
     this.hpBar.fillStyle(0x2c2c2c);
-    this.hpBar.fillRect(bx, by, barW, this.isBoss ? 6 : 4);
+    this.hpBar.fillRect(bx, by, barW, this.isBoss_ ? 6 : 4);
     const pct = Math.max(0, this.hp / this.maxHp);
     const hpColor = pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c;
     this.hpBar.fillStyle(hpColor);
-    this.hpBar.fillRect(bx, by, barW * pct, this.isBoss ? 6 : 4);
+    this.hpBar.fillRect(bx, by, barW * pct, this.isBoss_ ? 6 : 4);
   }
 
   containsPoint(px: number, py: number): boolean {
@@ -203,7 +220,7 @@ export class Enemy {
       speed:   this.speed,
       armor:   this.armor,
       reward:  this.reward,
-      isBoss:  this.isBoss,
+      isBoss:  this.isBoss_,
       isSlowed: this.slowMultiplier < 1,
     };
   }

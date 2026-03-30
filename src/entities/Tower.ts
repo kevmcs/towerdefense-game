@@ -33,6 +33,7 @@ export class Tower {
   private burstTarget: Enemy | null = null;
   private soldiers: Soldier[] = [];
   private respawnTimers: number[] = [];
+  private stunTimer = 0;
   private isSelected = false;
 
   private static readonly RESPAWN_DELAY = 6000; // ms before a dead soldier respawns
@@ -129,7 +130,19 @@ export class Tower {
     }
   }
 
+  stun(duration: number) {
+    this.stunTimer = Math.max(this.stunTimer, duration);
+  }
+
+  get isStunned(): boolean { return this.stunTimer > 0; }
+
   private updateShooter(delta: number, enemies: Enemy[], projectiles: Projectile[], bombs: Bomb[]) {
+    if (this.stunTimer > 0) {
+      this.stunTimer -= delta;
+      this.draw(); // refresh stun pulse every frame
+      return;
+    }
+    if (this.stunTimer < 0) { this.stunTimer = 0; this.draw(); } // restore color on recovery
     this.fireCooldown -= delta;
     if (this.fireCooldown > 0) return;
 
@@ -329,7 +342,15 @@ export class Tower {
 
   private draw() {
     this.graphics.clear();
-    this.graphics.fillStyle(this.stats.color);
+
+    // Stun overlay — orange pulsing border
+    if (this.stunTimer > 0) {
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.01);
+      this.graphics.lineStyle(4, 0xff6600, pulse);
+      this.graphics.strokeRect(this.x - 18, this.y - 18, 36, 36);
+    }
+
+    this.graphics.fillStyle(this.stunTimer > 0 ? 0x555555 : this.stats.color);
     this.graphics.fillRect(this.x - 16, this.y - 16, 32, 32);
     this.graphics.lineStyle(2, 0x000000, 0.5);
     this.graphics.strokeRect(this.x - 16, this.y - 16, 32, 32);

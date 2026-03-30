@@ -15,5 +15,5 @@ export const ENEMY_STATS: Record<string, EnemyStats> = {
   troll:    { hp: 350,  speed: 45,  reward: 40,  color: 0x1a5276, radius: 18, armor: 0,    meleeDamage: 25 },
   sprinter: { hp: 40,   speed: 200, reward: 8,   color: 0xf39c12, radius: 9,  armor: 0,    meleeDamage: 5  },
   armored:  { hp: 280,  speed: 60,  reward: 35,  color: 0x7f8c8d, radius: 17, armor: 0.55, meleeDamage: 18 },
-  boss:     { hp: 1000, speed: 32,  reward: 150, color: 0x922b21, radius: 28, armor: 0.2,  meleeDamage: 50, isBoss: true },
+  boss:     { hp: 1000, speed: 32,  reward: 150, color: 0x922b21, radius: 28, armor: 0.2,  meleeDamage: 999, isBoss: true },
 };
