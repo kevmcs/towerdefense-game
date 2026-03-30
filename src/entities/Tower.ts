@@ -181,6 +181,8 @@ export class Tower {
   }
 
   private findTarget(enemies: Enemy[]): Enemy | null {
+    let bestBlocked: Enemy | null = null;
+    let bestBlockedDist = Infinity;
     let best: Enemy | null = null;
     let bestDist = Infinity;
     for (const e of enemies) {
@@ -188,9 +190,14 @@ export class Tower {
       const dx = e.x - this.x;
       const dy = e.y - this.y;
       const d = Math.sqrt(dx * dx + dy * dy);
-      if (d <= this.effectiveRange && d < bestDist) { best = e; bestDist = d; }
+      if (d > this.effectiveRange) continue;
+      if (e.blockers > 0) {
+        if (d < bestBlockedDist) { bestBlocked = e; bestBlockedDist = d; }
+      } else {
+        if (d < bestDist) { best = e; bestDist = d; }
+      }
     }
-    return best;
+    return bestBlocked ?? best;
   }
 
   private findTargets(enemies: Enemy[], count: number, exclude: Set<Enemy> = new Set()): Enemy[] {
@@ -202,7 +209,12 @@ export class Tower {
       const d = Math.sqrt(dx * dx + dy * dy);
       if (d <= this.effectiveRange) inRange.push({ enemy: e, dist: d });
     }
-    inRange.sort((a, b) => a.dist - b.dist);
+    // Blocked enemies (held by soldiers) sorted to front, then by distance
+    inRange.sort((a, b) => {
+      const aBlocked = a.enemy.blockers > 0 ? 0 : 1;
+      const bBlocked = b.enemy.blockers > 0 ? 0 : 1;
+      return aBlocked - bBlocked || a.dist - b.dist;
+    });
     return inRange.slice(0, count).map(r => r.enemy);
   }
 
