@@ -90,6 +90,22 @@ export class Tower {
       }
       // Remove dead soldiers (they destroy themselves on death)
       this.soldiers = this.soldiers.filter(s => s.alive);
+
+      // Distribute enemies: each idle soldier gets a unique target
+      const claimed = new Set<Enemy>(
+        this.soldiers.map(s => s.currentTarget).filter((t): t is Enemy => t !== null && t.alive),
+      );
+      const inRange = enemies.filter(e => {
+        if (!e.alive) return false;
+        const dx = e.x - this.x; const dy = e.y - this.y;
+        return Math.sqrt(dx * dx + dy * dy) <= this.effectiveRange;
+      });
+      for (const s of this.soldiers) {
+        if (!s.isAtPost) continue;
+        const unclaimed = inRange.find(e => !claimed.has(e));
+        if (unclaimed) { s.assignTarget(unclaimed); claimed.add(unclaimed); }
+      }
+
       for (const s of this.soldiers) s.update(delta, enemies);
     } else {
       this.updateShooter(delta, enemies, projectiles, bombs);

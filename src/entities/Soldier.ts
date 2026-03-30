@@ -151,22 +151,19 @@ export class Soldier {
     }
   }
 
-  private updateAtPost(enemies: Enemy[]) {
-    // Enemies are checked against tower position (not soldier) to match range indicator
-    let nearest: Enemy | null = null;
-    let nearestDist = Infinity;
-    for (const e of enemies) {
-      if (!e.alive) continue;
-      const dx = e.x - this.towerX;
-      const dy = e.y - this.towerY;
-      const d  = Math.sqrt(dx * dx + dy * dy);
-      if (d <= this.towerRange && d < nearestDist) { nearest = e; nearestDist = d; }
-    }
-    if (nearest) {
-      this.target       = nearest;
-      this.pathProgress = this.homeProgress;
-      this.state        = 'engaging';
-    }
+  // Tower calls this to assign a specific enemy target to an idle soldier.
+  assignTarget(e: Enemy) {
+    this.target       = e;
+    this.pathProgress = this.homeProgress;
+    this.state        = 'engaging';
+  }
+
+  get isAtPost(): boolean { return this.state === 'atPost'; }
+  get currentTarget(): Enemy | null { return this.target; }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private updateAtPost(_enemies: Enemy[]) {
+    // Target assignment is handled by Tower to distribute enemies across siblings.
   }
 
   private updateEngaging(delta: number) {
