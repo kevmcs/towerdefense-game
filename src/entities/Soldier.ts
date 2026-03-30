@@ -320,28 +320,37 @@ export class Soldier {
     this.graphics.lineStyle(1.5, 0x000000, 0.6);
     this.graphics.strokeRect(this.x - 8, this.y - 8, 16, 16);
 
-    // Sword when fighting
-    if (this.state === 'fighting' && this.target) {
-      const dx   = this.target.x - this.x;
-      const dy   = this.target.y - this.y;
-      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      const nx   = dx / dist;
-      const ny   = dy / dist;
+    // Sword — always visible; points at target when engaging/fighting, else held upward
+    {
+      let nx: number, ny: number;
+      if ((this.state === 'fighting' || this.state === 'engaging') && this.target) {
+        const dx   = this.target.x - this.x;
+        const dy   = this.target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        nx = dx / dist;
+        ny = dy / dist;
+      } else {
+        // Resting pose: sword held diagonally up-right
+        nx =  0.7;
+        ny = -0.7;
+      }
+
+      const fighting = this.state === 'fighting';
 
       // Blade
-      this.graphics.lineStyle(3, 0xffffff, 0.9);
+      this.graphics.lineStyle(3, fighting ? 0xffffff : 0xe0e0e0, fighting ? 1.0 : 0.85);
       this.graphics.beginPath();
-      this.graphics.moveTo(this.x + nx * 8,        this.y + ny * 8);
-      this.graphics.lineTo(this.x + nx * (8 + 13), this.y + ny * (8 + 13));
+      this.graphics.moveTo(this.x + nx * 6,        this.y + ny * 6);
+      this.graphics.lineTo(this.x + nx * (6 + 16), this.y + ny * (6 + 16));
       this.graphics.strokePath();
 
       // Crossguard
       const px = -ny;
       const py =  nx;
-      this.graphics.lineStyle(2, 0xcccccc, 0.85);
+      this.graphics.lineStyle(2.5, 0xaaaaaa, fighting ? 1.0 : 0.8);
       this.graphics.beginPath();
-      this.graphics.moveTo(this.x + nx * 11 - px * 5, this.y + ny * 11 - py * 5);
-      this.graphics.lineTo(this.x + nx * 11 + px * 5, this.y + ny * 11 + py * 5);
+      this.graphics.moveTo(this.x + nx * 9 - px * 6, this.y + ny * 9 - py * 6);
+      this.graphics.lineTo(this.x + nx * 9 + px * 6, this.y + ny * 9 + py * 6);
       this.graphics.strokePath();
     }
   }
