@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PATH_WAYPOINTS, TOWER_SPOTS, GAME_WIDTH, GAME_HEIGHT, PATH_WIDTH } from '../config';
+import { PATH_WAYPOINTS, TOWER_SPOTS, GAME_WIDTH, GAME_HEIGHT, PATH_WIDTH, ACTIVE_ENEMY_SCALE } from '../config';
 import { Enemy } from '../entities/Enemy';
 import { Tower } from '../entities/Tower';
 import { Projectile } from '../entities/Projectile';
@@ -50,7 +50,7 @@ export class GameScene extends Phaser.Scene {
     this.state = 'idle';
 
     this.economy     = new EconomyManager(150, 20);
-    this.waveManager = new WaveManager();
+    this.waveManager = new WaveManager(ACTIVE_ENEMY_SCALE);
     this.hud         = new HUD(this, GAME_WIDTH);
 
     this.selectionPanel  = new TowerSelectionPanel(this, (type, idx) => this.onTowerSelected(type, idx));

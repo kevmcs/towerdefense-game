@@ -6,11 +6,13 @@ export class WaveManager {
   private currentWaveIndex = -1;
   private spawnQueue: { type: string; triggerAt: number }[] = [];
   private spawning = false;
+  private readonly scale: number;
 
   waveNumber = 0;
 
-  constructor() {
+  constructor(enemyScale = 1.0) {
     this.waves = WAVES;
+    this.scale = enemyScale;
   }
 
   get totalWaves(): number {
@@ -47,9 +49,22 @@ export class WaveManager {
     this.waveNumber = this.currentWaveIndex + 1;
 
     const wave = this.waves[this.currentWaveIndex];
+    const base  = wave.spawns;
+
+    // Pad spawn list proportionally to map length
+    const targetCount = Math.round(base.length * this.scale);
+    const extraCount  = targetCount - base.length;
+    const avgDelay    = base.length > 1
+      ? base.slice(1).reduce((s, e) => s + e.delay, 0) / (base.length - 1)
+      : 1000;
+    const spawns = [...base];
+    for (let i = 0; i < extraCount; i++) {
+      spawns.push({ type: base[i % base.length].type, delay: Math.round(avgDelay) });
+    }
+
     let cumDelay = 0;
     this.spawnQueue = [];
-    for (const entry of wave.spawns) {
+    for (const entry of spawns) {
       cumDelay += entry.delay;
       this.spawnQueue.push({ type: entry.type, triggerAt: currentTime + cumDelay });
     }

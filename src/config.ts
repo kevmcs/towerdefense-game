@@ -6,11 +6,15 @@ export interface MapDef {
   name: string;
   waypoints: { x: number; y: number }[];
   spots: { x: number; y: number }[];
+  /** Multiplier applied to enemy counts per wave (longer path = more enemies). */
+  enemyScale: number;
 }
 
 // ── Map 1 — "Winding Path" ────────────────────────────────────────────────
+// Path lengths (approx): Map1 ≈ 1420px, Map2 ≈ 2600px, Map3 ≈ 3240px
 const MAP1: MapDef = {
   name: 'Winding Path',
+  enemyScale: 1.0,
   waypoints: [
     { x: 0,   y: 120 },
     { x: 240, y: 120 },
@@ -39,6 +43,7 @@ const MAP1: MapDef = {
 // and the 120px band between the middle and bottom runs — covering 2 segments each.
 const MAP2: MapDef = {
   name: 'Zigzag',
+  enemyScale: 1.8,
   waypoints: [
     { x: 0,   y: 80  },   // entry top-left
     { x: 720, y: 80  },   // sweep right across top
@@ -71,6 +76,7 @@ const MAP2: MapDef = {
 // making flank towers there punish enemies twice.
 const MAP3: MapDef = {
   name: 'Spiral',
+  enemyScale: 2.25,
   waypoints: [
     { x: 0,   y: 300 },   // entry center-left
     { x: 160, y: 300 },   // step right
@@ -107,11 +113,13 @@ const MAP3: MapDef = {
 export const MAPS: MapDef[] = [MAP1, MAP2, MAP3];
 
 // These are set dynamically by GameScene — imported by Enemy.ts
-export let PATH_WAYPOINTS: { x: number; y: number }[] = MAP1.waypoints;
-export let TOWER_SPOTS: { x: number; y: number }[]    = MAP1.spots;
+export let PATH_WAYPOINTS:     { x: number; y: number }[] = MAP1.waypoints;
+export let TOWER_SPOTS:        { x: number; y: number }[] = MAP1.spots;
+export let ACTIVE_ENEMY_SCALE: number                     = MAP1.enemyScale;
 
 export function setActiveMap(index: number) {
   const map = MAPS[index] ?? MAP1;
-  PATH_WAYPOINTS = map.waypoints;
-  TOWER_SPOTS    = map.spots;
+  PATH_WAYPOINTS     = map.waypoints;
+  TOWER_SPOTS        = map.spots;
+  ACTIVE_ENEMY_SCALE = map.enemyScale;
 }
