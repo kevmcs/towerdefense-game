@@ -77,18 +77,17 @@ export const WAVES: WaveDef[] = [
     ],
     reward: 75,
   },
-  // Wave 7 — BOSS + goblins
+  // Wave 7 — troll + goblins
   {
     spawns: [
       { type: 'goblin', delay: 0 },
       { type: 'goblin', delay: 800 },
       { type: 'goblin', delay: 800 },
-      { type: 'boss',   delay: 2500 },
+      { type: 'troll',  delay: 2500 },
       { type: 'goblin', delay: 1000 },
       { type: 'goblin', delay: 800 },
     ],
     reward: 100,
-    hasBoss: true,
   },
   // Wave 8 — armored + troll push
   {
